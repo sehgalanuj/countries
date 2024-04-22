@@ -74,8 +74,17 @@ def index():
         username = current_user.username
     else:
         username = 'Guest'  # Or handle the case where the user is not logged in as you see fit
-        
-    return render_template('index.html', username=username)
+
+    is_admin = current_user.is_admin
+    all_users = []
+    if is_admin:
+        with sqlite3.connect(DATABASE) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, username FROM users")  # Fetching all users
+            all_users = cursor.fetchall()
+            
+    return render_template('index.html', username=username, is_admin=is_admin, users=all_users)
 
 @app.route('/continents', methods=['GET'])
 def continents():
@@ -87,18 +96,30 @@ def continents():
 
 @app.route('/countries', methods=['GET'])
 def countries():
+    user_id = request.args.get('user_id', None)
+    
     with sqlite3.connect(DATABASE) as conn:
         conn.row_factory = sqlite3.Row  # This enables column access by name
         c = conn.cursor()
         # Adjusted query to include a LEFT JOIN with visited_countries table and check for visited status
-        c.execute('''
-            SELECT countries.id, countries.name, continents.name as continent_name, 
-            CASE WHEN visited_countries.country_id IS NOT NULL THEN TRUE ELSE FALSE END as visited
-            FROM countries
-            JOIN continents ON countries.continent_id = continents.id
-            LEFT JOIN visited_countries ON countries.id = visited_countries.country_id AND visited_countries.user_id = ?
-            ORDER BY continents.name, countries.name
-        ''', (current_user.id,))
+        if(user_id):
+            c.execute('''
+               SELECT countries.id, countries.name, continents.name as continent_name, 
+               CASE WHEN visited_countries.country_id IS NOT NULL THEN TRUE ELSE FALSE END as visited
+               FROM countries
+               JOIN continents ON countries.continent_id = continents.id
+               LEFT JOIN visited_countries ON countries.id = visited_countries.country_id AND visited_countries.user_id = ?
+               ORDER BY continents.name, countries.name
+            ''', (user_id,))
+        else:
+            c.execute('''
+               SELECT countries.id, countries.name, continents.name as continent_name, 
+               CASE WHEN visited_countries.country_id IS NOT NULL THEN TRUE ELSE FALSE END as visited
+               FROM countries
+               JOIN continents ON countries.continent_id = continents.id
+               LEFT JOIN visited_countries ON countries.id = visited_countries.country_id AND visited_countries.user_id = ?
+               ORDER BY continents.name, countries.name
+            ''', (current_user.id,))
         rows = c.fetchall()
         
         # Organize countries by continent
@@ -119,18 +140,25 @@ def countries():
 
 @app.route('/visit', methods=['POST'])
 def visit_country():
-    print(current_user.id)
+    user_id = request.args.get('user_id', None)
+    
     try:
         with sqlite3.connect(DATABASE) as conn:
             c = conn.cursor()
             # Clear previous entries for this user
-            c.execute("DELETE FROM visited_countries WHERE user_id = ?", (current_user.id,))
+            if user_id:
+                c.execute("DELETE FROM visited_countries WHERE user_id = ?", (user_id,))
+            else:
+                c.execute("DELETE FROM visited_countries WHERE user_id = ?", (current_user.id,))                
             
             country_ids = request.get_json().get('visitedCountries')
             if country_ids:
                 # Prepare for inserting multiple records efficiently
                 for country_id in country_ids:
-                    c.execute("INSERT INTO visited_countries (country_id, user_id) VALUES (?, ?)", (country_id, current_user.id))
+                    if user_id:
+                        c.execute("INSERT INTO visited_countries (country_id, user_id) VALUES (?, ?)", (country_id, user_id))
+                    else:
+                        c.execute("INSERT INTO visited_countries (country_id, user_id) VALUES (?, ?)", (country_id, current_user.id))
                     
             conn.commit()            
             return jsonify({"success": True, "message": f"{len(country_ids)} countries marked as visited."})
@@ -149,19 +177,30 @@ def visited():
 
 @app.route('/visited_countries', methods=['GET'])
 def visited_countries():
+    user_id = request.args.get('user_id', None)
+    
     with sqlite3.connect(DATABASE) as conn:
         conn.row_factory = sqlite3.Row
         c = conn.cursor()
-        c.execute('''
-            SELECT iso2 FROM countries
-            JOIN visited_countries ON countries.id = visited_countries.country_id
-            WHERE visited_countries.user_id = ?
-        ''', (current_user.id,))
+        if user_id:
+            c.execute('''
+               SELECT iso2 FROM countries
+               JOIN visited_countries ON countries.id = visited_countries.country_id
+               WHERE visited_countries.user_id = ?
+            ''', (user_id,))
+        else:
+            c.execute('''
+               SELECT iso2 FROM countries
+               JOIN visited_countries ON countries.id = visited_countries.country_id
+               WHERE visited_countries.user_id = ?
+            ''', (current_user.id,))            
         visited = [dict(row) for row in c.fetchall()]
     return jsonify(visited)
 
 @app.route('/countries_stats', methods=['GET'])
 def countries_stats():
+    user_id = request.args.get('user_id', None)
+    
     with sqlite3.connect(DATABASE) as conn:
         conn.row_factory = sqlite3.Row
         c = conn.cursor()
@@ -169,7 +208,10 @@ def countries_stats():
         c.execute('SELECT COUNT(*) AS total FROM countries')
         total_countries = c.fetchone()['total']
         # Visited countries
-        c.execute('SELECT COUNT(*) AS visited FROM visited_countries WHERE visited_countries.user_id = ?', (current_user.id,))
+        if user_id:
+            c.execute('SELECT COUNT(*) AS visited FROM visited_countries WHERE visited_countries.user_id = ?', (user_id,))
+        else:
+            c.execute('SELECT COUNT(*) AS visited FROM visited_countries WHERE visited_countries.user_id = ?', (current_user.id,))
         visited_countries = c.fetchone()['visited']
         # Calculate percentage, rounded up
         percentage_visited = math.ceil((visited_countries / total_countries) * 100) if total_countries else 0

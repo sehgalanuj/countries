@@ -89,8 +89,8 @@
         .country-item {
 	    padding: 5px 10px;
 	    display: inline-block;
-	    width: 33.33%; /* Adjusts the item width to fit three per row */
-	    box-sizing: border-box; /* Includes padding and border in the element's width */
+	    width: 33.33%;
+	    box-sizing: border-box;
         }
         .country-checkbox {
             margin-right: 5px;
@@ -138,6 +138,14 @@
     <div>Welcome, <span id="usernameDisplay"></span></div>
     {% if current_user.is_admin %}
         <a href="/admin">Admin Panel</a>
+	<div>
+	  <select id="userSelector" onchange="loadUserCountries(this.value)">
+            <option value="">Select a User...</option>
+            {% for user in users %}
+            <option value="{{ user['id'] }}">{{ user['username'] }}</option>
+            {% endfor %}
+	  </select>
+	</div>
     {% endif %}    
     <a href="/logout">Logout</a>
   </header>
@@ -152,21 +160,46 @@
     <button id="save">Save Visited Countries</button>
 
     <script>
+      function loadUserCountries(userId) {
+	  if (!userId) return;
+	  // Assuming you have a Flask route like `/user_countries/<user_id>` to fetch user-specific countries
+	  fetch(`/countries_stats?user_id=${userId}`)
+              .then(response => response.json())
+              .then(data => {
+		  // Assuming 'data' contains user-specific countries
+		  // Clear existing countries from the map if necessary
+		  // Add new countries to the map
+                  fetchVisitedCountries(userId).then(() => {
+                     updateMap();
+                     loadGeoJson();
+                  })
+                  fetchCountries(userId); // Refresh countries list
+                  fetchAndDisplayStats(userId);
+              });
+      }
+    </script>
+
+
+    <script>
         // Initialize the map
         var map = L.map('map').setView([20, 0], 2);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
         }).addTo(map);      
 
-        function fetchAndDisplayStats() {
-            fetch('/countries_stats') // Adjust this to your Flask route
+        function fetchAndDisplayStats(userId) {
+	    var query = "";
+	    if(userId) {
+	        query = `?user_id=${userId}`;
+	    } 	      
+            fetch(`/countries_stats${query}`) // Adjust this to your Flask route
                 .then(response => response.json())
                 .then(data => {
                     const statsHtml = `${data.visited} out of ${data.total} countries visited (${data.percentage}% of the world)`;
                     $('#countryStats').html(statsHtml);
                 });
         }
-
+      
       // Function to style the GeoJSON features      
       function style(feature) {
 	  // Check if this country's iso_a2 code is in the list of visited countries
@@ -183,8 +216,13 @@
       var visitedCountriesIso = []; // Array to hold the iso2 codes of visited countries
 
       // Fetch the visited countries from the Flask endpoint       
-      function fetchVisitedCountries() {
-	  return fetch('/visited_countries') // Adjust the endpoint as necessary 
+      function fetchVisitedCountries(userId) {
+	  var query = "";
+            if(userId) {
+                query = `?user_id=${userId}`;
+            }
+
+	  return fetch(`/visited_countries${query}`) // Adjust the endpoint as necessary 
               .then(response => response.json())
               .then(data => {
 		  visitedCountriesIso = data.map(country => country.iso2);
@@ -225,9 +263,13 @@
     </script>
     <script>
             
-        function fetchCountries() {
+      function fetchCountries(userId) {
+	  query = "";
+	  if(userId) {
+	      query = `?user_id=${userId}`
+	  }
             $.ajax({
-                url: '/countries', // Ensure this matches your Flask route
+                url: `/countries${query}`, // Ensure this matches your Flask route
                 success: function(continents) {
                     $('.country-list').empty(); // Clear previous entries
 
@@ -250,14 +292,21 @@
             });
         }
 
-        $('#save').click(function() {
+      $('#save').click(function() {
+	  var userId = document.getElementById('userSelector').value;
+
+	  query = "";
+	  if(userId) {
+	      query = `?user_id=${userId}`;
+	  }
+	  
             var visitedCountries = $('.country-checkbox:checked').map(function() {
                 return $(this).data('country-id');
             }).get();
 
             $.ajax({
                 type: 'POST',
-                url: '/visit', // Ensure this matches your Flask route
+                url: `/visit${query}`, // Ensure this matches your Flask route
                 contentType: "application/json",
                 data: JSON.stringify({visitedCountries: visitedCountries}),
                 success: function(response) {
@@ -271,12 +320,12 @@
                         $('#infoModal').fadeOut();
 			$('#modalBackdrop').fadeOut();
                         // Refresh the map here by re-fetching the visited countries and updating the GeoJSON layer
-			fetchVisitedCountries().then(() => {
+			fetchVisitedCountries(userId).then(() => {
 			    updateMap();
 			    loadGeoJson();
 			})
-                        fetchCountries(); // Refresh countries list
-                        fetchAndDisplayStats();
+                        fetchCountries(userId); // Refresh countries list
+                        fetchAndDisplayStats(userId);
                     }, 3000); // 3000 milliseconds = 3 seconds
                 },
                 error: function(response) {
