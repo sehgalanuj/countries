@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Visited Countries Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+	header {
+            background-color: #fff;
+            padding: 10px 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            width: 90%; /* Matches the map and country list width */
+            max-width: 960px; /* Ensures consistency across larger screens */
+            margin-bottom: 20px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+	header div {
+	    display: flex;
+	    gap: 15px; /* Creates space between links */
+	}
+	header a {
+            color: #5c67f2;
+            text-decoration: none;
+            font-weight: bold;
+        }
+	header a:hover {
+            text-decoration: underline;
+        }
+        #map {
+            height: 600px;
+            width: 90%;
+            max-width: 960px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .country-list, #countryStats {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 960px;
+            margin-bottom: 20px;
+        }
+        .continent {
+            margin-bottom: 20px;
+            cursor: pointer;
+        }
+        .continent-name {
+            display: flex;
+            align-items: center;
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .continent-name:before {
+            content: '+';
+            margin-right: 10px;
+            font-size: 24px;
+            color: #5c67f2;
+        }
+        .continent-name.expanded:before {
+            content: '-';
+        }
+        .country-list ul {
+            display: none;
+            padding: 0;
+        }
+        .country-item {
+            list-style-type: none;
+            display: inline-block;
+            width: 33%;
+        }
+        .country-checkbox {
+            margin-right: 5px;
+        }
+        button {
+            background-color: #5c67f2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 5px;
+        }
+        button:hover {
+            background-color: #5058e5;
+        }
+	.modal-backdrop {
+	    position: fixed;
+	    top: 0;
+	    left: 0;
+	    width: 100%;
+	    height: 100%;
+	    background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black */
+	    z-index: 999; /* Ensure it sits below the modal but above other content */
+	    display: none; /* Hidden by default */
+	}
+        #infoModal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 20px;
+            z-index: 1000; /* Ensure the modal sits above the backdrop */
+            border-radius: 5px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            display: none; /* Hidden by default */
+            text-align: center;
+	}	
+    </style>
+</head>
+<body>
+  <header>
+    <div>Welcome, <span id="usernameDisplay"></span></div>
+    {% if current_user.is_admin %}
+        <a href="/admin">Admin Panel</a>
+    {% endif %}    
+    <a href="/logout">Logout</a>
+  </header>
+    <div id="modalBackdrop" class="modal-backdrop"></div>
+    <div id="infoModal">
+        <p id="modalContent">Changes saved successfully!</p>
+    </div>
+
+    <div id="map"></div>
+    <div id="countryStats">Loading stats...</div>
+    <div class="country-list"></div>
+    <button id="save">Save Visited Countries</button>
+
+    <script>
+        // Initialize the map
+        var map = L.map('map').setView([20, 0], 2);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+        }).addTo(map);      
+
+        function fetchAndDisplayStats() {
+            fetch('/countries_stats') // Adjust this to your Flask route
+                .then(response => response.json())
+                .then(data => {
+                    const statsHtml = `${data.visited} out of ${data.total} countries visited (${data.percentage}% of the world)`;
+                    $('#countryStats').html(statsHtml);
+                });
+        }
+
+      // Function to style the GeoJSON features      
+      function style(feature) {
+	  // Check if this country's iso_a2 code is in the list of visited countries
+	  const isVisited = visitedCountriesIso.includes(feature.properties.iso_a2);
+	  return {
+              fillColor: isVisited ? '#FF6347' : '#FFFFFF',
+              weight: 2,
+              opacity: 1,
+              color: 'gray', // Border color
+              fillOpacity: 0.7
+	  };
+      }
+
+      var visitedCountriesIso = []; // Array to hold the iso2 codes of visited countries
+
+      // Fetch the visited countries from the Flask endpoint       
+      function fetchVisitedCountries() {
+	  return fetch('/visited_countries') // Adjust the endpoint as necessary 
+              .then(response => response.json())
+              .then(data => {
+		  visitedCountriesIso = data.map(country => country.iso2);
+              });
+      }
+
+      
+      function updateMap() {
+	  // Assuming the map data update involves removing and re-adding the GeoJSON layer
+	  map.eachLayer(function(layer) {
+              if (layer instanceof L.GeoJSON) { // Check if it's the GeoJSON layer
+		  map.removeLayer(layer); // Remove the old GeoJSON layer
+              }
+	  });
+      }
+      
+      // Load and style the GeoJSON data
+      function loadGeoJson() {
+	  fetch('/static/custom.geo.json') // Adjust the path if necessary
+              .then(response => response.json())
+              .then(geojsonData => {
+		  L.geoJson(geojsonData, {
+                      style: style,
+                      // You can add interactive functionality here if desired
+		  }).addTo(map);
+              });
+      }
+
+      // Main function to run the above functions
+      function main() {
+	  fetchVisitedCountries().then(() => {
+              loadGeoJson();
+	  });
+	  fetchAndDisplayStats();
+      }
+
+      $(document).ready(main);
+    </script>
+    <script>
+            
+        function fetchCountries() {
+            $.ajax({
+                url: '/countries', // Ensure this matches your Flask route
+                success: function(continents) {
+                    $('.country-list').empty(); // Clear previous entries
+
+                    continents.forEach(continent => {
+                        var continentDiv = $('<div class="continent"></div>').appendTo('.country-list');
+                        var continentName = $(`<div class="continent-name">${continent.name}</div>`).appendTo(continentDiv);
+                        var countryList = $('<ul></ul>').appendTo(continentDiv);
+                        continent.countries.forEach(country => {
+                            $(`<li class="country-item"><input type="checkbox" class="country-checkbox" data-country-id="${country.id}" ${country.visited ? 'checked' : ''}> ${country.name}</li>`).appendTo(countryList);
+                        });
+
+                        // Toggle countries display on continent name click
+                        continentName.click(function() {
+                            countryList.toggle();
+                            // Toggle 'expanded' class to change '+' and '-'
+                            $(this).toggleClass('expanded');
+                        });
+                    });
+                }
+            });
+        }
+
+        $('#save').click(function() {
+            var visitedCountries = $('.country-checkbox:checked').map(function() {
+                return $(this).data('country-id');
+            }).get();
+
+            $.ajax({
+                type: 'POST',
+                url: '/visit', // Ensure this matches your Flask route
+                contentType: "application/json",
+                data: JSON.stringify({visitedCountries: visitedCountries}),
+                success: function(response) {
+                    console.log('Update successful', response);
+                    // Show the modal
+		    $('#modalBackdrop').fadeIn();
+                    $('#infoModal').fadeIn();
+
+                    // Wait for 5 seconds, then hide the modal and refresh the map
+                    setTimeout(function() {
+                        $('#infoModal').fadeOut();
+			$('#modalBackdrop').fadeOut();
+                        // Refresh the map here by re-fetching the visited countries and updating the GeoJSON layer
+			fetchVisitedCountries().then(() => {
+			    updateMap();
+			    loadGeoJson();
+			})
+                        fetchCountries(); // Refresh countries list
+                        fetchAndDisplayStats();
+                    }, 3000); // 3000 milliseconds = 3 seconds
+                },
+                error: function(response) {
+                    console.log('Update failed', response);
+                    alert('Failed to update visited countries.');
+                }
+            });
+        });
+
+        $(document).ready(function() {
+            fetchCountries();
+            fetchAndDisplayStats();
+        });
+    </script>
+
+    <script>
+      $(document).ready(function() {
+	  $('#usernameDisplay').text('{{ username }}'); // Use the username passed from Flask
+	  fetchCountries();
+	  fetchAndDisplayStats();
+      });
+    </script>
+
+    
+</body>
+</html>

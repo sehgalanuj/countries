@@ -1,0 +1,11 @@
+version: '2'
+services:
+  countries:
+    image: sehgalanuj/countries:latest
+    container_name: countries
+    restart: always
+    #network_mode: host
+    volumes:
+      - ./db:/db
+    ports:
+      - 5002:5002
