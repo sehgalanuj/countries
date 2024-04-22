@@ -5,6 +5,7 @@ COPY templates/index.html /templates/index.html
 COPY templates/admin.html /templates/admin.html
 COPY templates/login.html /templates/login.html
 COPY static/custom.geo.json /static/custom.geo.json
+COPY static/logo.png /static/logo.png
 COPY requirements.txt .
 
 EXPOSE 5002

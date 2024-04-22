@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Login</title>
+    <title>Login - Visited Countries Tracker</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -22,10 +22,12 @@
             text-align: center;
         }
         h2 {
-            color: #333;
+            margin: 20px 0;
         }
-        form {
-            margin-top: 20px;
+        img.logo {
+            width: 200px; /* Adjust based on your actual logo size */
+            height: auto;
+            margin-bottom: 20px;
         }
         input[type="text"],
         input[type="password"] {
@@ -34,7 +36,10 @@
             margin-top: 10px;
             border: 1px solid #ddd;
             border-radius: 4px;
-            box-sizing: border-box; /* Adds padding and border to element's total width and height */
+            box-sizing: border-box;
+        }
+	input[type="text"] {
+            margin-bottom: 20px;  /* Increased space below the username input */
         }
         button {
             width: 100%;
@@ -54,13 +59,16 @@
 </head>
 <body>
     <div class="login-container">
-        <h2>Login</h2>
+        <img src="/static/logo.png" alt="Logo" class="logo">
+        <h2>Visited Countries Tracker</h2>
         <form action="" method="post">
             <div>
-                <input type="text" id="username" name="username" placeholder="Username" required>
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" required placeholder="Enter your username">
             </div>
             <div>
-                <input type="password" id="password" name="password" placeholder="Password" required>
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required placeholder="Enter your password">
             </div>
             <button type="submit">Login</button>
         </form>
