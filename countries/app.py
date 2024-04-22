@@ -1,6 +1,6 @@
 import json
 import math
-from flask import Flask, redirect, url_for, render_template, request, session, jsonify
+from flask import Flask, redirect, url_for, render_template, request, session, jsonify, flash
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
@@ -222,6 +222,24 @@ def admin():
         users = cursor.fetchall()
 
     return render_template('admin.html', users=users)
+
+@app.route('/admin/change_password', methods=['POST'])
+@login_required
+def change_password():
+    if not current_user.is_admin:
+        return 'Unauthorized', 403
+
+    user_id = request.form['user_id']
+    new_password = request.form['new_password']
+    hashed_password = generate_password_hash(new_password)
+
+    with sqlite3.connect(DATABASE) as conn:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE users SET password_hash = ? WHERE id = ?", (hashed_password, user_id))
+        conn.commit()
+
+    flash('Password updated successfully.', 'success')
+    return redirect(url_for('admin'))
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5002)
