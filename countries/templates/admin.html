@@ -45,7 +45,7 @@
             width: 90%;
             max-width: 400px;
         }
-        input[type="text"], input[type="password"], input[type="checkbox"] {
+        input[type="text"], input[type="email"], input[type="password"], input[type="checkbox"] {
             margin-top: 10px;
             width: 100%;
             padding: 8px;
@@ -59,7 +59,7 @@
             border-radius: 5px;
             cursor: pointer;
             font-size: 16px;
-            margin-top: 20px;
+            margin-top: 0px;
         }
         button:hover {
             background-color: #5058e5;
@@ -81,6 +81,7 @@
             padding: 8px;
             text-align: left;
             border-bottom: 1px solid #ddd;
+	    vertical-align: middle; /* This will vertically center the content of the cell */
         }
         th {
             background-color: #f4f4f9;
@@ -141,19 +142,27 @@
 
     <h2>Add New User</h2>
     <form action="/admin" method="post">
-        <div>
-            <label for="username">Username:</label>
-            <input type="text" id="username" name="username" required>
-        </div>
-        <div>
-            <label for="password">Password:</label>
-            <input type="password" id="password" name="password" required>
-        </div>
-        <div>
-            <label for="is_admin">Admin:</label>
-            <input type="checkbox" id="is_admin" name="is_admin">
-        </div>
-        <button type="submit">Add User</button>
+      <div>
+        <label for="full_name">Full Name:</label>
+        <input type="text" id="full_name" name="full_name" required>
+      </div>
+      <div>
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="email" required>
+      </div>
+      <div>
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" required>
+      </div>
+      <div>
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required>
+      </div>
+      <div>
+        <label for="is_admin">Admin:</label>
+        <input type="checkbox" id="is_admin" name="is_admin">
+      </div>
+      <button type="submit">Add User</button>
     </form>
 
 
@@ -165,8 +174,17 @@
           <input type="hidden" id="userId" name="user_id">
           <div>
             <label for="new_password">New Password:</label>
-            <input type="password" id="new_password" name="new_password" required>
+            <input type="password" id="new_password" name="new_password">
           </div>
+	  <div>
+            <label for="new_full_name">Full Name:</label>
+            <input type="text" id="new_full_name" name="new_full_name">
+	  </div>
+	  <div>
+            <label for="new_email">Email:</label>
+            <input type="email" id="new_email" name="new_email">
+	  </div>
+	  <p/>
           <button type="submit">Submit</button>
         </form>
       </div>
@@ -187,6 +205,8 @@
         <tr>
             <th>ID</th>
             <th>Username</th>
+	    <th>Full Name</th>
+	    <th>Email</th>
             <th>Is Admin</th>
 	    <th>Actions</th>
         </tr>
@@ -194,8 +214,10 @@
         <tr>
             <td>{{ user.id }}</td>
             <td>{{ user.username }}</td>
+            <td>{{ user.full_name }}</td>
+            <td>{{ user.email }}</td>
             <td>{{ 'Yes' if user.is_admin else 'No' }}</td>
-	    <td><button type="button" onclick="showModal('{{ user.id }}')">Change Password</button></td>
+	    <td><button type="button" onclick="showModal('{{ user.id }}', '{{ user.username }}', '{{ user.full_name }}', '{{ user.email }}')">Update User</button></td>
         </tr>
         {% endfor %}
     </table>
@@ -208,8 +230,11 @@ var modal = document.getElementById('passwordModal');
 var span = document.getElementsByClassName("close")[0];
 
 // When the user clicks on the button, open the modal
-function showModal(userId) {
-    document.getElementById('userId').value = userId; // Set user ID for the form
+function showModal(userId, username, fullName, email) {
+    document.getElementById('userId').value = userId;
+    document.getElementById('username').value = username;
+    document.getElementById('full_name').value = fullName;
+    document.getElementById('email').value = email;
     modal.style.display = "block";
 }
 

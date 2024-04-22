@@ -57,33 +57,40 @@
             margin-bottom: 20px;
         }
         .continent {
-            margin-bottom: 20px;
-            cursor: pointer;
+            width: 98%;
+            background-color: #f9f9f9;
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
         .continent-name {
-            display: flex;
-            align-items: center;
-            font-size: 18px;
-            color: #333;
-            margin-bottom: 5px;
-        }
+            cursor: pointer;
+            font-size: 20px;
+            font-weight: bold;
+        }	
         .continent-name:before {
             content: '+';
-            margin-right: 10px;
-            font-size: 24px;
-            color: #5c67f2;
+            margin-right: 5px;
+            font-size: 20px;
+            color: #333; /* Adjust color to match your design */
         }
         .continent-name.expanded:before {
             content: '-';
         }
+        .country-item {
+            padding: 5px 10px;
+        }	
         .country-list ul {
             display: none;
             padding: 0;
         }
         .country-item {
-            list-style-type: none;
-            display: inline-block;
-            width: 33%;
+	    padding: 5px 10px;
+	    display: inline-block;
+	    width: 33.33%; /* Adjusts the item width to fit three per row */
+	    box-sizing: border-box; /* Includes padding and border in the element's width */
         }
         .country-checkbox {
             margin-right: 5px;
@@ -291,8 +298,6 @@
 	  fetchCountries();
 	  fetchAndDisplayStats();
       });
-    </script>
-
-    
+    </script>    
 </body>
 </html>

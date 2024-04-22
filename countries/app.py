@@ -61,7 +61,9 @@ def init_db():
                      id INTEGER PRIMARY KEY AUTOINCREMENT,
                      username TEXT UNIQUE NOT NULL,
                      password_hash TEXT NOT NULL,
-                     is_admin BOOLEAN NOT NULL DEFAULT 0)''')
+                     is_admin BOOLEAN NOT NULL DEFAULT 0,
+                     full_name TEXT,
+                     email TEXT)''')
 
 init_db()
 
@@ -209,8 +211,8 @@ def admin():
         is_admin = request.form.get('is_admin') == 'on'
         with sqlite3.connect(DATABASE) as conn:
             cursor = conn.cursor()
-            cursor.execute("INSERT INTO users (username, password_hash, is_admin) VALUES (?, ?, ?)",
-                           (username, password, is_admin))
+            cursor.execute("INSERT INTO users (username, password_hash, is_admin, full_name, email) VALUES (?, ?, ?, ?, ?)",
+                           (username, password, is_admin, full_name, email))
             conn.commit()
         return redirect(url_for('admin'))  # Redirect to clear POST data and refresh the page
 
@@ -218,7 +220,7 @@ def admin():
     with sqlite3.connect(DATABASE) as conn:
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-        cursor.execute("SELECT id, username, is_admin FROM users")
+        cursor.execute("SELECT id, username, is_admin, full_name, email FROM users")
         users = cursor.fetchall()
 
     return render_template('admin.html', users=users)
@@ -231,13 +233,28 @@ def change_password():
 
     user_id = request.form['user_id']
     new_password = request.form['new_password']
-    hashed_password = generate_password_hash(new_password)
+    new_full_name = request.form['new_full_name']
+    new_email = request.form['new_email']
 
-    with sqlite3.connect(DATABASE) as conn:
-        cursor = conn.cursor()
-        cursor.execute("UPDATE users SET password_hash = ? WHERE id = ?", (hashed_password, user_id))
-        conn.commit()
+    if len(new_password) > 0:
+        hashed_password = generate_password_hash(new_password)
+        with sqlite3.connect(DATABASE) as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE users SET password_hash = ? WHERE id = ?", (hashed_password, user_id))
+            conn.commit()
 
+    if len(new_full_name) > 0:
+        with sqlite3.connect(DATABASE) as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE users SET full_name = ? WHERE id = ?", (new_full_name, user_id))
+            conn.commit()
+
+    if len(new_email) > 0:
+        with sqlite3.connect(DATABASE) as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE users SET email = ? WHERE id = ?", (new_email, user_id))
+            conn.commit()
+            
     flash('Password updated successfully.', 'success')
     return redirect(url_for('admin'))
 
