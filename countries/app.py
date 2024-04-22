@@ -251,6 +251,9 @@ def admin():
         username = request.form['username']
         password = generate_password_hash(request.form['password'])
         is_admin = request.form.get('is_admin') == 'on'
+        full_name = request.form['full_name']
+        email = request.form['email']
+        
         with sqlite3.connect(DATABASE) as conn:
             cursor = conn.cursor()
             cursor.execute("INSERT INTO users (username, password_hash, is_admin, full_name, email) VALUES (?, ?, ?, ?, ?)",
