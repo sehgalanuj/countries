@@ -60,9 +60,9 @@ The Visited Countries Tracker is a Flask-based web application that allows users
 
 ### Usage
 
-- **Login Page**: Navigate to `http://localhost:5000/login` to access the login page.
+- **Login Page**: Navigate to `http://localhost:5002` to access the login page.
 - **Main Page**: Once logged in, the main page will display a map with countries marked as visited.
-- **Admin Panel**: Admin users can access the admin panel via `http://localhost:5000/admin` to manage users.
+- **Admin Panel**: Admin users can access the admin panel via `http://localhost:5002/admin` to manage users.
 
 ## Development
 
