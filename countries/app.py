@@ -1,13 +1,19 @@
 import json
 import math
-from flask import Flask, redirect, url_for, render_template, request, session, jsonify, flash
+import os
+import json
+from flask import Flask, redirect, url_for, render_template, request, session, jsonify, flash, make_response
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from onelogin.saml2.auth import OneLogin_Saml2_Auth
+from onelogin.saml2.utils import OneLogin_Saml2_Utils
+from onelogin.saml2.settings import OneLogin_Saml2_Settings
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.middleware.proxy_fix import ProxyFix
 import sqlite3
-
 
 app = Flask(__name__)
 app.secret_key = 'rfgejgyso1XQ3*'  # Change to your secret key
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=0, x_prefix=1)
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -302,6 +308,104 @@ def change_password():
             
     flash('Password updated successfully.', 'success')
     return redirect(url_for('admin'))
+
+def init_saml_auth(req, idp_name):
+    settings_path = os.path.join(os.getcwd(), 'saml', 'settings.json')
+    
+    with open(settings_path, 'r') as settings_file:
+        settings_json = json.load(settings_file)
+
+        idp_settings = settings_json.get('idp', {}).get(idp_name.lower())
+        if not idp_settings:
+            raise ValueError(f"No settings found for IdP: {idp_name}")
+
+        complete_settings = {}
+        complete_settings['sp'] = settings_json['sp'].copy()
+        complete_settings['strict'] = settings_json['strict']
+        complete_settings['debug'] = settings_json['debug']
+        complete_settings['idp'] = idp_settings
+
+        complete_settings['sp']['entityId'] = complete_settings['sp']['entityId'] + idp_name
+        complete_settings['sp']['assertionConsumerService']['url'] = complete_settings['sp']['assertionConsumerService']['url'] + "?idp=" + idp_name
+        complete_settings['sp']['singleLogoutService']['url'] = complete_settings['sp']['singleLogoutService']['url'] + "?idp=" + idp_name
+
+        app.logger.debug(complete_settings)
+        
+        auth = OneLogin_Saml2_Auth(req, complete_settings)
+        return auth
+
+def prepare_flask_request(request):
+    # Determine the correct scheme and host for SAML to use
+    scheme = request.headers.get('X-Forwarded-Proto', request.scheme)
+    host = request.headers.get('X-Forwarded-Host', request.host)
+    
+    # Remove port number if coming from a standard HTTPS port via Cloudflare
+    if ':' in host and scheme == 'https':
+        host = host.split(':')[0]  # Assuming the forwarded host includes a port
+
+    url_data = {
+        'https': 'on' if scheme == 'https' else 'off',
+        'http_host': host,
+        #'server_port': request.environ.get('SERVER_PORT', '443' if scheme == 'https' else '80'),
+        'server_port': '443' if scheme == 'https' else '80',
+        'script_name': request.path,
+        'get_data': request.args.copy(),
+        'post_data': request.form.copy()
+    }
+    return url_data
+
+@app.route('/saml/login')
+def saml_login():
+    idp_name = request.args.get('idp', 'microsoft')
+    req = prepare_flask_request(request)
+    auth = init_saml_auth(req, idp_name)
+    return redirect(auth.login())
+
+@app.route('/saml/consume', methods=['POST'])
+def saml_consume():
+    req = prepare_flask_request(request)
+    idp_name = request.args.get('idp', 'microsoft')
+    auth = init_saml_auth(req, idp_name)
+    auth.process_response()
+    errors = auth.get_errors()
+
+    if errors:
+        app.logger.debug(errors)
+        error_reason = auth.get_last_error_reason()
+        app.logger.error('SAML error reason: %s', error_reason)
+        return render_template('error.html', errors=errors)
+    
+    attributes = auth.get_attributes()
+    user_email = auth.get_nameid()
+    return log_user_in(user_email)
+
+def log_user_in(user_email):
+    with sqlite3.connect(DATABASE) as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM users WHERE email = ?", (user_email,))
+        user = cursor.fetchone()
+
+    if user:
+        user_instance = User(str(user['id']), user['username'], user['is_admin'])
+        login_user(user_instance)
+        return redirect(url_for('index'))
+    else:
+        return render_template('error.html', errors=['User not registered'])
+
+@app.route("/saml/metadata/<idp_name>")
+def saml_metadata(idp_name):
+    req = prepare_flask_request(request)
+    auth = init_saml_auth(req, idp_name)
+    settings = auth.get_settings()
+    metadata = settings.get_sp_metadata()
+    errors = settings.validate_metadata(metadata)
+    if len(errors) == 0:
+        resp = make_response(metadata, 200)
+        resp.headers['Content-Type'] = 'text/xml'
+        return resp
+    else:
+        return ', '.join(errors), 500
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5002)

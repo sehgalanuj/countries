@@ -31,3 +31,4 @@ requests>=2.31.0
     # via requests
 #werkzeug==3.0.1
     # via flask
+python3-saml

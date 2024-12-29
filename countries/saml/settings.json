@@ -1,0 +1,26 @@
+{
+    "strict": true,
+    "debug": true,
+    "sp": {
+        "entityId": "https://mapmy.travel/saml/metadata/",
+        "assertionConsumerService": {
+            "url": "https://mapmy.travel/saml/consume",
+            "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
+        },
+        "singleLogoutService": {
+            "url": "https://mapmy.travel/saml/sls",
+            "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+        },
+        "NameIDFormat": "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress"
+    },
+    "idp": {
+	"microsoft": {
+            "entityId": "https://sts.windows.net/0a432a1c-02ce-4ebe-b1e9-e56081838594/",
+            "singleSignOnService": {
+		"url": "https://login.microsoftonline.com/0a432a1c-02ce-4ebe-b1e9-e56081838594/saml2",
+		"binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+            },
+            "x509cert": "MIIC8DCCAdigAwIBAgIQQs5ByjTuOYVPSAYfNUiQ7DANBgkqhkiG9w0BAQsFADA0MTIwMAYDVQQDEylNaWNyb3NvZnQgQXp1cmUgRmVkZXJhdGVkIFNTTyBDZXJ0aWZpY2F0ZTAeFw0yNDEyMjkxMjE1MDJaFw0yNzEyMjkxMjE1MDJaMDQxMjAwBgNVBAMTKU1pY3Jvc29mdCBBenVyZSBGZWRlcmF0ZWQgU1NPIENlcnRpZmljYXRlMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyybvv2/hzaJU6nwK0+terqSmckEKn1t5kuUJe2f3Rx3m9T9kZ6eOWHjvDtWUL++8sTGKXbFuCLGxNVWzPZyecsYzV3XYkJEAQG3B/JOLlidhL2y+fvo0ff4PSjOoIWT+BzbZHBQ1HGvSNizpSCAkOcDYfkce7vmffH3Ba2ZwyslGm1G4jSE5zLKb6UlNjGde5ZVx81skaerdiy3dmgS04l43nEnTtzwQxs5+9wvkpBxgv2TJ7R35CkUSnxcYwnr8obH7zdHIwQRRzwhFJS7nr4otrwkC5DaM5RbVhjNItRL8m0Vksc/s9glbkRDeb6+Qm/MpOjC0OZzCU2MPSEsDpQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQDG/+xd+FQFJN4yZowCN19zalvB5UZ2G9fscVsCPnwuyBSJ4GrzQGMuR5T1jIEKjxqi5TzS4wQlgX0g0tZX55m9wRXUXDsSWcZSpA/IVpRNm9G6+WXRycIgtkm6ukx0v3XflcWKIxFeEAI6+UeVm01h2xbRTXBnGnmWftmOoPDuP7TuZiIrRmBR6/1lhskGlk0Ig9E0x7e2yDn8BfwXsOOag8kfTlGBQAZUuA57Ga2t5gDVeTHyWLuaJvyHmCMuXt/VJJZG2PpmFqZ8fmiH9z1gF4+eRxqVd03ejWV/Oa5z+nEZ/+MRh7VOGBKgGAPdF3bXI/Hc63s1lzFHWNIK7HOK"
+	}
+    }
+}
