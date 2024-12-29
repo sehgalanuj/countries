@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Login - Visited Countries Tracker</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -25,7 +26,7 @@
             margin: 20px 0;
         }
         img.logo {
-            width: 200px; /* Adjust based on your actual logo size */
+            width: 200px;
             height: auto;
             margin-bottom: 20px;
         }
@@ -38,22 +39,30 @@
             border-radius: 4px;
             box-sizing: border-box;
         }
-	input[type="text"] {
-            margin-bottom: 20px;  /* Increased space below the username input */
+	    input[type="text"] {
+            margin-bottom: 20px;
         }
-        button {
+        button, .login-btn {
             width: 100%;
             padding: 10px;
             margin-top: 20px;
-            background-color: #5c67f2;
             border: none;
             border-radius: 4px;
             color: white;
             cursor: pointer;
             font-size: 16px;
         }
-        button:hover {
-            background-color: #5058e5;
+        button:hover, .login-btn:hover {
+            opacity: 0.9;
+        }
+        .google {
+            background-color: #db4437;
+        }
+        .microsoft {
+            background-color: #0078D4;
+        }
+        .login-btn i {
+            margin-right: 8px;
         }
     </style>
 </head>
@@ -72,6 +81,13 @@
             </div>
             <button type="submit">Login</button>
         </form>
+        <!-- SSO Buttons -->
+        <!-- <button class="login-btn google" onclick="location.href='/saml/login?idp=google'">
+            <i class="fab fa-google"></i> Login with Google
+        </button>-->
+        <button class="login-btn microsoft" onclick="location.href='/saml/login?idp=microsoft'">
+            <i class="fab fa-microsoft"></i> Login with <em>sehgal.eu</em> Account
+        </button>
     </div>
 </body>
 </html>
